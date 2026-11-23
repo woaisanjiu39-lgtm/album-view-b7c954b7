@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="robots" content="noindex,nofollow,noarchive"><meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>旅行图册</title>
+  <style>body{margin:0;padding:2.5rem 1.5rem;font:1rem/1.65 system-ui,sans-serif;background:#fffaf3;color:#292521}main{max-width:32rem;margin:auto}</style>
+</head>
+<body>
+<main><h1>旅行图册</h1><p id="message">请使用收到的完整分享链接。</p></main>
+<script>
+  async function openAlbum() {
+    const fragment = location.hash.slice(1);
+    if (!/^[a-f0-9]{64}$/.test(fragment)) return;
+    const message = document.querySelector('#message');
+    message.textContent = '正在打开图册…';
+    try {
+      const bytes = Uint8Array.from(fragment.match(/../g), pair => Number.parseInt(pair, 16));
+      const key = await crypto.subtle.importKey('raw', bytes, 'AES-GCM', false, ['decrypt']);
+      const response = await fetch('./album.bin', {cache: 'no-cache'});
+      if (!response.ok) throw new Error('Album download failed');
+      const packet = new Uint8Array(await response.arrayBuffer());
+      const data = await crypto.subtle.decrypt({name: 'AES-GCM', iv: packet.subarray(0, 12)}, key, packet.subarray(12));
+      const html = new TextDecoder().decode(data);
+      document.open();
+      document.write(html);
+      document.close();
+    } catch {
+      message.textContent = '暂时无法打开。请确认地址完整，再用手机浏览器刷新。';
+    }
+  }
+  openAlbum();
+</script>
+</body>
+</html>
